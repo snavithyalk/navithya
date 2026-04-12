@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAVITHYA - Multi-Role Service Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1063/1063376.png">
+    <meta name="theme-color" content="#2979ff">
+    <!-- Leaflet for potential map use -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" class="auth-overlay hidden">
+        <div class="auth-box">
+            <button class="close-auth" onclick="hideAuthOverlay()">&times;</button>
+            <h1 class="logo-text" style="text-align: center; font-size: 2.5rem;">NAVITHYA<span class="accent">.</span></h1>
+            <p class="subtitle" style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Cloud-Based Service Portal</p>
+
+            <div class="auth-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="tab-login" class="btn-primary" style="flex: 1;" onclick="switchAuthTab('login')">Login</button>
+                <button id="tab-signup" class="btn-outline" style="flex: 1;" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+
+            <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <input type="text" id="login-username" placeholder="Phone Number / Admin Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+            </form>
+
+            <form id="signup-form" class="auth-form hidden" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <input type="text" id="signup-name" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="signup-phone" placeholder="Phone Number" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                </div>
+                <div class="form-group">
+                    <select id="signup-district" required onchange="onDistrictChange(this.value)">
+                        <option value="" disabled selected>Select District</option>
+                        <option value="Colombo">Colombo</option>
+                        <option value="Gampaha">Gampaha</option>
+                        <option value="Kalutara">Kalutara</option>
+                        <option value="Kandy">Kandy</option>
+                        <option value="Galle">Galle</option>
+                        <!-- Other districts added in JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="signup-village" placeholder="Village / Area" required>
+                </div>
+                <div class="form-group">
+                    <label>Role for Signup (Subject to Admin Approval)</label>
+                    <select id="signup-role">
+                        <option value="customer">Customer</option>
+                        <option value="provider">Service Provider</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app-container">
+        <!-- Dynamic Navbar Populated by JS -->
+        <nav class="navbar">
+            <h2 class="logo-text-small" onclick="navigate('home')" style="cursor: pointer;">NAVITHYA<span class="accent">.</span></h2>
+            <ul id="nav-links" class="nav-links">
+                <!-- Links added dynamically based on role -->
+            </ul>
+        </nav>
+
+        <!-- Pages -->
+        <!-- Home Page -->
+        <section id="page-home" class="page active">
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Welcome to <span class="accent">Navithya</span></h1>
+                    <p>Verified Professionals | Sri Lankan Heritage | Premium Quality</p>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+                        <button class="btn-primary" onclick="navigate('request-job')">Request Service</button>
+                        <button class="btn-outline" onclick="navigate('store')">Browse Store</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container">
+                <h2 style="text-align: center; margin-bottom: 3rem;">Our Premier Services</h2>
+                <div id="home-services-grid" class="services-grid">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Request Job Page -->
+        <section id="page-request-job" class="page hidden container">
+            <h2 class="page-title">Book a Service</h2>
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <form id="job-request-form" onsubmit="handleJobRequest(event)">
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="req-name" required placeholder="Type your name">
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <select id="req-district" required onchange="onReqDistrictChange(this.value)">
+                            <option value="">Select District</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Main Town / Village</label>
+                        <input type="text" id="req-village" required placeholder="Enter location">
+                    </div>
+                    <div class="form-group">
+                        <label>Issue (Service Needed)</label>
+                        <select id="req-service" required onchange="updateProviderList()">
+                            <option value="">Select Service</option>
+                            <optgroup label="Electronics & Appliances">
+                                <option value="TV/Radio Repair">TV & Radio Repair</option>
+                                <option value="Washing Machine">Washing Machine Repair</option>
+                                <option value="Refrigerator/Fridge">Refrigerator & Fridge Repair</option>
+                                <option value="AC Repair/Service">AC Installation & Service</option>
+                                <option value="Mobile Phone Repair">Mobile Phone Repair</option>
+                                <option value="Laptop/PC Repair">Laptop & Computer Repair</option>
+                            </optgroup>
+                            <optgroup label="Home Maintenance">
+                                <option value="Electrical Wiring">Electrical Wiring & Repairs</option>
+                                <option value="Plumbing">Plumbing & Water Leakage</option>
+                                <option value="Mason Work">Mason Work & Cementing</option>
+                                <option value="Painting">Painting (Interior/Exterior)</option>
+                                <option value="Tiling">Tiling & Flooring</option>
+                                <option value="Carpentry">Carpentry & Woodwork</option>
+                                <option value="Aluminum/Glass">Aluminum & Glass Work</option>
+                                <option value="Steel/Welding">Steel Work & Welding</option>
+                            </optgroup>
+                            <optgroup label="Security & Tech">
+                                <option value="CCTV Installation">CCTV Installation & Maintenance</option>
+                                <option value="Solar Installation">Solar Panel Installation</option>
+                                <option value="Internet/Networking">Internet & Networking Setup</option>
+                            </optgroup>
+                            <optgroup label="Outdoor & Others">
+                                <option value="Cleaning Services">Home & Office Cleaning</option>
+                                <option value="Gardening/Landscaping">Gardening & Landscaping</option>
+                                <option value="Pest Control">Pest Control Services</option>
+                                <option value="Clothing/Tailor">Clothing & Tailoring</option>
+                                <option value="Vehicle Mechanic">Vehicle Mechanic (Call-out)</option>
+                                <option value="Transport/Lorry">Lorry & Three-Wheel Hires</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Provider (Auto-located by Ratings)</label>
+                        <select id="req-provider" required>
+                            <option value="">Choose a provider...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%;">Send Request</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Gallery Page -->
+        <section id="page-gallery" class="page hidden container">
+            <h2 class="page-title">Service Gallery</h2>
+            <div id="gallery-grid" class="services-grid"></div>
+        </section>
+
+        <!-- Store Page -->
+        <section id="page-store" class="page hidden container">
+            <h2 class="page-title">Navithya Stores</h2>
+            <div id="store-grid" class="services-grid"></div>
+        </section>
+
+        <!-- Reviews Page -->
+        <section id="page-reviews" class="page hidden container">
+            <h2 class="page-title">Customer Reviews</h2>
+            <div id="reviews-list" class="services-grid"></div>
+        </section>
+
+        <!-- Rate Us Page -->
+        <section id="page-rate" class="page hidden container">
+            <h2 class="page-title">Rate Our Platform</h2>
+            <div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+                <p>How was your experience with Navithya?</p>
+                <div class="star-rating" style="font-size: 2rem; margin: 1rem 0;">
+                    <span onclick="setRate(1)">☆</span><span onclick="setRate(2)">☆</span><span onclick="setRate(3)">☆</span><span onclick="setRate(4)">☆</span><span onclick="setRate(5)">☆</span>
+                </div>
+                <textarea placeholder="Your comments..."></textarea>
+                <button class="btn-primary" style="margin-top: 1rem;">Submit Feedback</button>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard -->
+        <section id="page-admin-dashboard" class="page hidden container">
+            <h2 class="page-title">Admin Command Center</h2>
+            <div class="services-grid">
+                <div class="card">
+                    <h3>👥 User Management</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Approve new signups</p>
+                    <div class="scroll-box" id="admin-user-list">
+                        <!-- User list with approval buttons -->
+                        <p>Loading users...</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>🛠️ Manage Services</h3>
+                    <form onsubmit="addService(event)">
+                        <input type="text" id="new-service-name" placeholder="Service Name">
+                        <button type="submit" class="btn-outline" style="margin-top: 10px; width: 100%;">Add Service</button>
+                    </form>
+                    <div id="admin-services-list" style="margin-top:10px;"></div>
+                </div>
+                <div class="card">
+                    <h3>📅 Provider Plans</h3>
+                    <div id="admin-plans-edit">
+                        <!-- inputs for prices -->
+                    </div>
+                    <button class="btn-primary" style="width: 100%;" onclick="savePlans()">Save Prices</button>
+                </div>
+                <div class="card">
+                    <h3>📢 Global Broadcast</h3>
+                    <textarea id="broadcast-msg" placeholder="System alert..."></textarea>
+                    <button class="btn-primary" style="width: 100%; margin-top: 10px;" onclick="sendBroadcast()">Broadcast Now</button>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 20px;">
+                <h3>📦 Store Orders & Job Requests</h3>
+                <div class="scroll-box" id="admin-activity-log"></div>
+            </div>
+        </section>
+
+        <!-- Provider Dashboard -->
+        <section id="page-provider-dashboard" class="page hidden container">
+            <h2 class="page-title">Provider Dashboard</h2>
+            <div class="services-grid">
+                <div class="card">
+                    <h3>👨‍💼 Employee Management</h3>
+                    <form onsubmit="addEmployee(event)">
+                        <input type="text" id="emp-name" placeholder="Name">
+                        <input type="text" id="emp-pos" placeholder="Position">
+                        <button type="submit" class="btn-outline" style="margin-top:10px; width:100%;">Add Employee</button>
+                    </form>
+                    <div id="provider-emp-list" style="margin-top:10px;"></div>
+                </div>
+                <div class="card">
+                    <h3>🏗️ My Mini-Site</h3>
+                    <p>Customize your profile</p>
+                    <input type="text" id="shop-name" placeholder="Shop Name">
+                    <label>Logo Upload</label>
+                    <input type="file" id="shop-logo">
+                    <button class="btn-primary" style="margin-top:10px; width:100%;">Update Site</button>
+                </div>
+                <div class="card">
+                    <h3>💳 Bank Details</h3>
+                    <input type="text" id="bank-name" placeholder="Bank">
+                    <input type="text" id="acc-num" placeholder="Account Number">
+                    <button class="btn-primary" style="margin-top:10px; width:100%;">Save Details</button>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3>✅ Completed Jobs</h3>
+                <div id="provider-history"></div>
+            </div>
+        </section>
+
+        <!-- Customer Dashboard -->
+        <section id="page-customer-dashboard" class="page hidden container">
+            <h2 class="page-title">Your Account</h2>
+            <div class="card">
+                <h3>My Profile</h3>
+                <p id="cust-profile-info">Name: ...</p>
+                <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <h3>Tracking Number</h3>
+                    <div id="tracking-list">
+                        <!-- Active jobs with tracking IDs -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Service Detail Page -->
+        <section id="page-service-detail" class="page hidden container">
+            <div id="service-detail-content">
+                <!-- Populated via JS -->
+                 <button class="btn-outline" onclick="navigate('home')">← Back to Home</button>
+                 <div class="card" style="margin-top: 20px;">
+                    <h1 id="detail-title">Service Name</h1>
+                    <p id="detail-description" style="margin-top: 20px; font-size: 1.1rem;"></p>
+                    <div id="detail-items" style="margin-top: 20px;">
+                        <h3>Equipment & Materials Used:</h3>
+                        <ul id="detail-materials-list"></ul>
+                    </div>
+                    <button class="btn-primary" style="margin-top: 30px;" onclick="navigate('request-job')">Book This Service</button>
+                 </div>
+            </div>
+        </section>
+
+        <!-- Notifications Drawer -->
+        <div id="notification-drawer" class="hidden" style="position: fixed; right: 20px; top: 80px; z-index: 1500;">
+            <div id="notification-dropdown">
+                <h4>🔔 Notifications</h4>
+                <div id="notification-list"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer style="margin-top: 5rem; padding: 4rem 2rem; background: var(--bg-card); border-top: 1px solid var(--border-color); text-align: center;">
+            <div class="container">
+                <h2 class="logo-text" style="margin-bottom: 2rem;">NAVITHYA<span class="accent">.</span></h2>
+                <div style="display: flex; justify-content: center; gap: 3rem; margin-bottom: 2rem; color: var(--text-muted);">
+                    <div>
+                        <h4>CONTACT</h4>
+                        <p>0729929453 / 0769929453</p>
+                    </div>
+                    <div>
+                        <h4>EMAIL</h4>
+                        <p>SNAVITHYA@GMAIL.COM</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.8rem;">&copy; 2026 Navithya Services. Professional Solutions for Sri Lanka.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <!-- Main App Script -->
+    <script src="app.js"></script>
+</body>
+
+</html>
